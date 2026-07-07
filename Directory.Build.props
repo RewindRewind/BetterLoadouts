@@ -1,0 +1,28 @@
+<Project>
+    <PropertyGroup>
+        <TarkovDir Condition=" '$(TarkovDir)' == '' AND '$(TARKOV_DIR)' != '' ">$(TARKOV_DIR)</TarkovDir>
+        <TarkovDir Condition=" '$(TarkovDir)' == '' ">$(MSBuildThisFileDirectory)../../</TarkovDir>
+        <TarkovManagedDir Condition="'$(TarkovManagedDir)' == ''">$(TarkovDir)EscapeFromTarkov_Data/Managed/</TarkovManagedDir>
+        <TarkovBepInExCoreDir Condition="'$(TarkovBepInExCoreDir)' == ''">$(TarkovDir)BepInEx/core/</TarkovBepInExCoreDir>
+        <TarkovPluginsSPTDir Condition="'$(TarkovPluginsSPTDir)' == ''">$(TarkovDir)BepInEx/plugins/spt/</TarkovPluginsSPTDir>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <LangVersion>latest</LangVersion>
+        <Nullable>enable</Nullable>
+
+        <Company>cebarks</Company>
+        <Product>BetterLoadouts</Product>
+        <Authors>cebarks</Authors>
+
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+        <Deterministic>true</Deterministic>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net472" Version="1.0.3" PrivateAssets="all" />
+    </ItemGroup>
+</Project>
