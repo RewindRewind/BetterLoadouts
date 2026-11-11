@@ -1,16 +1,19 @@
+using EFT;
+using EFT.Builds;
+using EFT.InventoryLogic;
+using EFT.UI;
+using BepInEx.Logging;
+using SPT.Reflection.Patching;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using EFT.Builds;
-using EFT.InventoryLogic;
-using EFT.UI;
-using SPT.Reflection.Patching;
 
 namespace BetterLoadouts.Patches;
 
 public class AdditiveApplyPatch : ModulePatch
 {
+    private static readonly ManualLogSource Log = BepInEx.Logging.Logger.CreateLogSource("BetterLoadouts.AdditiveApply");
     private static FieldInfo? _selectedBuildField;
     private static PropertyInfo? _equipmentProperty;
 
@@ -24,7 +27,13 @@ public class AdditiveApplyPatch : ModulePatch
                 m.GetParameters()[0].ParameterType == typeof(EEquipmentBuildType));
 
         if (method == null)
+        {
+            Log.LogError("Could not find the EquipmentBuildsScreen ignore-list method.");
             throw new Exception("BetterLoadouts: could not find ignore-list method on EquipmentBuildsScreen (IEnumerable<string> with EEquipmentBuildType param)");
+        }
+
+        if (Plugin.DebugLogging.Value)
+            Log.LogInfo($"Found ignore-list method: {method.DeclaringType?.FullName}.{method.Name}");
 
         _selectedBuildField = typeof(EquipmentBuildsScreen)
             .GetFields(BindingFlags.NonPublic | BindingFlags.Instance)
@@ -33,7 +42,15 @@ public class AdditiveApplyPatch : ModulePatch
                 f.FieldType.GetProperty("BuildType")?.PropertyType == typeof(EEquipmentBuildType));
 
         if (_selectedBuildField != null)
+        {
             _equipmentProperty = _selectedBuildField.FieldType.GetProperty("Equipment");
+            if (Plugin.DebugLogging.Value)
+                Log.LogInfo($"Found selected-build field: {_selectedBuildField.Name} ({_selectedBuildField.FieldType.FullName})");
+        }
+        else
+        {
+            Log.LogWarning("Could not find the selected-build field; additive apply will be skipped.");
+        }
 
         return method;
     }
@@ -46,32 +63,41 @@ public class AdditiveApplyPatch : ModulePatch
     {
         if (buildType == EEquipmentBuildType.Storage)
         {
+            if (Plugin.DebugLogging.Value)
+                Log.LogInfo("Skipping additive apply for a storage build.");
             return;
         }
 
         if (_selectedBuildField == null)
         {
+            if (Plugin.DebugLogging.Value)
+                Log.LogInfo($"Skipping additive apply for {buildType}: selected-build field was not found.");
             return;
         }
 
         var selectedBuild = _selectedBuildField.GetValue(__instance);
         if (selectedBuild == null)
         {
+            if (Plugin.DebugLogging.Value)
+                Log.LogInfo($"Skipping additive apply for {buildType}: no build is selected.");
             return;
         }
 
         var equipment = _equipmentProperty?.GetValue(selectedBuild) as InventoryEquipment;
         if (equipment == null)
         {
+            Log.LogWarning($"Skipping additive apply for {buildType}: selected build has no equipment.");
             return;
         }
 
         var ignoreList = new List<string>(__result);
+        var originalCount = ignoreList.Count;
+        var addedSlots = new List<string>();
         var added = false;
 
         foreach (var slotName in InventoryEquipment.AllSlotNames)
         {
-            var slotId = GClass867.ToStringNoBox(slotName);
+            var slotId = EnumExtensions.ToStringNoBox(slotName);
             if (ignoreList.Contains(slotId))
             {
                 continue;
@@ -81,6 +107,7 @@ public class AdditiveApplyPatch : ModulePatch
             if (slot?.ContainedItem == null)
             {
                 ignoreList.Add(slotId);
+                addedSlots.Add(slotId);
                 added = true;
             }
         }
@@ -89,5 +116,8 @@ public class AdditiveApplyPatch : ModulePatch
         {
             __result = ignoreList;
         }
+
+        if (Plugin.DebugLogging.Value)
+            Log.LogInfo($"Additive apply for {buildType}: {originalCount} existing ignored slots, {addedSlots.Count} empty slots added: {(addedSlots.Count == 0 ? "none" : string.Join(", ", addedSlots))}.");
     }
 }

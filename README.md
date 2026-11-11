@@ -21,6 +21,8 @@ If the preset defines every slot, behavior is identical to vanilla.
 
 Drop `BetterLoadouts.dll` into `BepInEx/plugins/`.
 
+To enable diagnostic logging, set `DebugLogging = true` in the `[Logging]` section of `BepInEx/config/io.cebarks.betterloadouts.cfg` after starting the game once. It is disabled by default; warnings and errors are still logged.
+
 ## Build
 
 ```bash
